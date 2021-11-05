@@ -16,6 +16,8 @@ fn main() {
 
     let mut reg = Registers::new();
     let mut mem: Memory = [0; 0xFFFF + 1];
+
+    init_memory(&mut mem);
     
     // Open the path in read-only mode
     let path = Path::new("tetris.gb");

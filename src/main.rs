@@ -3,7 +3,9 @@ mod alu;
 mod mmu;
 mod cpu;
 mod gpu;
+mod audio;
 
+use crate::audio::Audio_Engine;
 use crate::registers::*;
 use crate::mmu::*;
 use crate::cpu::*;
@@ -14,6 +16,7 @@ use minifb::{ Window, WindowOptions };
 use std::io::Read;
 use std::path::Path;
 use std::fs::File;
+use std::thread;
 
 const WIDTH: usize = 160;
 const HEIGHT: usize = 144;
@@ -47,6 +50,9 @@ fn main() {
     
     assert_eq!(read_byte(0x0147, &mem), 0x00, "MBC not supported!");
     
+    // Start audio thread
+    thread::spawn(move || Audio_Engine::Do_Audio(&mem));
+
     let mut count: u32 = 0;
     loop {
         count += 1;
@@ -64,7 +70,7 @@ fn main() {
         println!("Last opcode: {:#04x}", opcode);
         println!("Call count: {}", count);
         println!("Line Y: {}", read_byte(0xFF44, &mem));
-        reg.print();
+        //reg.print();
 
         if reg.f << 4 > 0x00 {
             println!("{:b}", reg.f);

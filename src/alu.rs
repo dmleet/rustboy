@@ -62,9 +62,27 @@ pub fn alu_dec(reg: &mut Registers, n: u8) -> u8 {
     r.0
 }
 
+// Returns the result of AND n and sets flags
+pub fn alu_and(reg: &mut Registers, n: u8) {
+    reg.a &= n;
+    reg.set_flag(Flag::Z, reg.a == 0);
+    reg.set_flag(Flag::N, false);
+    reg.set_flag(Flag::H, true);
+    reg.set_flag(Flag::C, false);
+}
+
 // Stores the reult of OR n in A and sets flags
 pub fn alu_or(reg: &mut Registers, n: u8) {
     reg.a = reg.a | n;
+    reg.set_flag(Flag::Z, reg.a == 0);
+    reg.set_flag(Flag::N, false);
+    reg.set_flag(Flag::H, false);
+    reg.set_flag(Flag::C, false);
+}
+
+// Stores the result of XOR n in A and sets flags
+pub fn alu_xor(reg: &mut Registers, n: u8) {
+    reg.a = reg.a ^ n;
     reg.set_flag(Flag::Z, reg.a == 0);
     reg.set_flag(Flag::N, false);
     reg.set_flag(Flag::H, false);

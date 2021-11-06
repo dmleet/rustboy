@@ -28,7 +28,7 @@ pub fn next_word(reg: &mut Registers, mem: &[u8]) -> u16 {
 
 // Cpu instruction set
 // Returns m-cycle length of instruction
-pub fn call_instruction(opcode: u8, reg: &mut Registers, mem: &mut [u8]) -> u32 {
+pub fn call_instruction(opcode: u8, reg: &mut Registers, mem: &mut Memory) -> u16 {
     match opcode {
 
         // NOP
@@ -92,6 +92,12 @@ pub fn call_instruction(opcode: u8, reg: &mut Registers, mem: &mut [u8]) -> u32 
         // LD A, (BC)
         0x0A => {
             reg.a = read_byte(reg.bc(), mem);
+            2
+        },
+
+        // DEC BC
+        0x0B => {
+            reg.set_bc(reg.bc().wrapping_sub(1));
             2
         },
 
@@ -208,6 +214,13 @@ pub fn call_instruction(opcode: u8, reg: &mut Registers, mem: &mut [u8]) -> u32 
             1
         }
 
+        // LD A, (HL+)
+        0x2A => {
+            reg.a = read_byte(reg.hl(), mem);
+            reg.set_hl(reg.hl().wrapping_add(1));
+            2
+        },
+
         // INC L
         0x2C => {
             reg.l = alu_inc(reg, reg.l);
@@ -220,6 +233,14 @@ pub fn call_instruction(opcode: u8, reg: &mut Registers, mem: &mut [u8]) -> u32 
             2
         },
 
+        // CPL
+        0x2F => {
+            reg.a = !reg.a;
+            reg.set_flag(Flag::N, true);
+            reg.set_flag(Flag::H, true);
+            1
+        },
+
         // LD SP, d16
         0x31 => {
             reg.sp = next_word(reg, mem);
@@ -228,8 +249,15 @@ pub fn call_instruction(opcode: u8, reg: &mut Registers, mem: &mut [u8]) -> u32 
 
         // LD (HL-), A
         0x32 => { 
-            reg.set_hl(reg.hl() - 1);
             write_byte(reg.hl(), reg.a, mem);
+            reg.set_hl(reg.hl().wrapping_sub(1));
+            2
+        },
+
+        //LD (HL), d8
+        0x36 => {
+            let val = next_byte(reg, mem);
+            write_byte(reg.hl(), val, mem);
             2
         },
 
@@ -251,6 +279,18 @@ pub fn call_instruction(opcode: u8, reg: &mut Registers, mem: &mut [u8]) -> u32 
         // LD B, C
         0x41 => {
             reg.b = reg.c;
+            1
+        },
+
+        // LD B, A
+        0x47 => {
+            reg.b = reg.a;
+            1
+        },
+
+        // LD C, A
+        0x4F => {
+            reg.c = reg.a;
             1
         },
 
@@ -308,6 +348,18 @@ pub fn call_instruction(opcode: u8, reg: &mut Registers, mem: &mut [u8]) -> u32 
             1
         },
 
+        // AND C
+        0xA1 => {
+            alu_and(reg, reg.c);
+            1
+        },
+
+        // XOR C
+        0xA9 => {
+            alu_xor(reg, reg.c);
+            1
+        },
+
         // XOR A
         0xAF => {
             reg.a ^= reg.a;
@@ -324,6 +376,12 @@ pub fn call_instruction(opcode: u8, reg: &mut Registers, mem: &mut [u8]) -> u32 
             1
         },
 
+        // OR C
+        0xB1 => {
+            alu_or(reg, reg.c);
+            1
+        },
+
         // CP A
         0xBF => {
             alu_cp(reg, reg.a);
@@ -334,6 +392,26 @@ pub fn call_instruction(opcode: u8, reg: &mut Registers, mem: &mut [u8]) -> u32 
         0xC3 => {
             reg.pc = next_word(reg, mem);
             4
+        },
+
+        // RET
+        0xC9 => {
+            let adr = pop_stack(reg, mem);
+            reg.pc = adr;
+            4
+        }
+
+        // CALL CB
+        0xCB => {
+            call_cb(reg, mem)
+        }
+
+        // CALL a16
+        0xCD => {
+            let adr = next_word(reg, mem);
+            push_stack(reg.pc + 2, reg, mem);
+            reg.pc = adr;
+            6
         },
 
         // JP NC, a16
@@ -352,15 +430,42 @@ pub fn call_instruction(opcode: u8, reg: &mut Registers, mem: &mut [u8]) -> u32 
             3
         },
 
+        // LD (C), A
+        0xE2 => {
+            let adr = 0xFF00 + reg.c as u16;
+            write_byte(adr, reg.a, mem);
+            2
+        },
+
+        // AND d8
+        0xE6 => {
+            let n = next_byte(reg, mem);
+            alu_and(reg, n);
+            2
+        },
+
+        // LD (a16), A
+        0xEA => {
+            let adr = next_word(reg, mem);
+            write_byte(adr, reg.a, mem);
+            4
+        },
+
         // LDH A, (a8)
         0xF0 => {
-            let adr = next_byte(reg, mem) as u16;
-            reg.a = read_byte(0xFF00 + adr, mem);
+            let adr = 0xFF00 + next_byte(reg, mem) as u16;
+            reg.a = read_byte(adr, mem);
             3
         },
 
         // DI
         0xF3 => {
+            // TODO: Interupts are not implemented
+            1
+        },
+
+        // EI
+        0xFB => {
             // TODO: Interupts are not implemented
             1
         },
@@ -377,4 +482,35 @@ pub fn call_instruction(opcode: u8, reg: &mut Registers, mem: &mut [u8]) -> u32 
             panic!("unsupported instruction: {:#04x}", opcode);
         }
     }
+}
+
+fn call_cb(reg: &mut Registers, mem: &mut Memory) -> u16 {
+    let opcode = next_byte(reg, mem);
+    match opcode {
+
+        // SWAP A
+        0x37 => {
+            reg.a = (reg.a >> 4) | (reg.a << 4);
+            reg.set_flag(Flag::Z, false);
+            reg.set_flag(Flag::N, false);
+            reg.set_flag(Flag::H, false);
+            reg.set_flag(Flag::C, false);
+            2
+        },
+
+        _ => {
+            panic!("unsupported CB instruction: {:#04x}", opcode);
+        }
+    }
+}
+
+fn push_stack(val: u16, reg: &mut Registers, mem: &mut Memory) {
+    reg.sp -= 2;
+    write_word(reg.sp, val, mem);
+}
+
+fn pop_stack(reg: &mut Registers, mem: &mut Memory) -> u16 {
+    let val = read_word(reg.sp, mem);
+    reg.sp += 2;
+    val
 }

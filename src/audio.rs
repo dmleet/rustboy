@@ -25,18 +25,28 @@ struct SoundChannel{
     frequency: u8    
 }
 
+impl SoundChannel{
+    fn new() -> SoundChannel{
+        return SoundChannel { sweep_time: 0.0, sweep_dir: SweepDirection::Addition, sweep_num: 0,
+             wave_duty: 0.0, sound_length: 0, initial_volume: 0,
+              envelope_direction: EnvelopeDirection::Increase, envelope_num: 0, frequency: 1 };
+    }
+}
+
 impl AudioEngine{
-    pub fn Do_Audio(mem: &Memory){
-        let mut chan_1 : SoundChannel;
-        /* 
+    pub fn do_audio(mem: &Memory){
+        let mut chan_1 = SoundChannel::new();
         loop {
-            chan_1.frequency = 
-            for i in 0xff10..0xff46 {
-                    print!("{:X}-",mem[i]);
-                
-            }
-            println!("");
+
+            chan_1.sweep_dir = match read_bit(0xFF10, 3, mem){
+                true => SweepDirection::Subtraction,
+                false => SweepDirection::Addition
+            };
+
+            
+
+
         }
-        */
+        
     }
 }

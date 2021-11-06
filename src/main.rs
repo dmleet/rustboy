@@ -51,7 +51,7 @@ fn main() {
     assert_eq!(read_byte(0x0147, &mem), 0x00, "MBC not supported!");
     
     // Start audio thread
-    thread::spawn(move || AudioEngine::Do_Audio(&mem));
+    thread::spawn(move || AudioEngine::do_audio(&mem));
 
     let mut count: u32 = 0;
     loop {

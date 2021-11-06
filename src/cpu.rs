@@ -28,7 +28,7 @@ pub fn next_word(reg: &mut Registers, mem: &[u8]) -> u16 {
 
 // Cpu instruction set
 // Returns m-cycle length of instruction
-pub fn call_instruction(opcode: u8, reg: &mut Registers, mem: &mut [u8]) -> u32 {
+pub fn call_instruction(opcode: u8, reg: &mut Registers, mem: &mut Memory) -> u16 {
     match opcode {
 
         // NOP
@@ -208,6 +208,13 @@ pub fn call_instruction(opcode: u8, reg: &mut Registers, mem: &mut [u8]) -> u32 
             1
         }
 
+        // LD A, (HL+)
+        0x2A => {
+            reg.a = read_byte(reg.hl(), mem);
+            reg.set_hl(reg.hl().wrapping_add(1));
+            2
+        },
+
         // INC L
         0x2C => {
             reg.l = alu_inc(reg, reg.l);
@@ -228,8 +235,15 @@ pub fn call_instruction(opcode: u8, reg: &mut Registers, mem: &mut [u8]) -> u32 
 
         // LD (HL-), A
         0x32 => { 
-            reg.set_hl(reg.hl() - 1);
             write_byte(reg.hl(), reg.a, mem);
+            reg.set_hl(reg.hl().wrapping_sub(1));
+            2
+        },
+
+        //LD (HL), d8
+        0x36 => {
+            let val = next_byte(reg, mem);
+            write_byte(reg.hl(), val, mem);
             2
         },
 
@@ -336,6 +350,14 @@ pub fn call_instruction(opcode: u8, reg: &mut Registers, mem: &mut [u8]) -> u32 
             4
         },
 
+        // CALL a16
+        0xCD => {
+            let adr = next_word(reg, mem);
+            push_stack(reg.pc + 2, reg, mem);
+            reg.pc = adr;
+            6
+        },
+
         // JP NC, a16
         0xD2 => {
             if reg.get_flag(Flag::C) {
@@ -352,10 +374,24 @@ pub fn call_instruction(opcode: u8, reg: &mut Registers, mem: &mut [u8]) -> u32 
             3
         },
 
+        // LD (C), A
+        0xE2 => {
+            let adr = 0xFF00 + reg.c as u16;
+            write_byte(adr, reg.a, mem);
+            2
+        },
+
+        // LD (a16), A
+        0xEA => {
+            let adr = next_word(reg, mem);
+            write_byte(adr, reg.a, mem);
+            4
+        },
+
         // LDH A, (a8)
         0xF0 => {
-            let adr = next_byte(reg, mem) as u16;
-            reg.a = read_byte(0xFF00 + adr, mem);
+            let adr = 0xFF00 + next_byte(reg, mem) as u16;
+            reg.a = read_byte(adr, mem);
             3
         },
 
@@ -377,4 +413,9 @@ pub fn call_instruction(opcode: u8, reg: &mut Registers, mem: &mut [u8]) -> u32 
             panic!("unsupported instruction: {:#04x}", opcode);
         }
     }
+}
+
+fn push_stack(val: u16, reg: &mut Registers, mem: &mut Memory) {
+    reg.sp -= 2;
+    write_word(reg.sp, val, mem);
 }

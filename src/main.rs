@@ -4,7 +4,7 @@ mod mmu;
 mod cpu;
 mod gpu;
 
-use crate::registers::*;
+//use crate::registers::*;
 use crate::mmu::*;
 use crate::cpu::*;
 use crate::gpu::*;
@@ -21,8 +21,8 @@ const HEIGHT: usize = 144;
 fn main() {
     println!("Hello, rustboy!");
 
-    let mut reg = Registers::new();
     let mut mem: Memory = [0; 0xFFFF + 1];
+    let mut cpu: Cpu = Cpu::new();
     let mut gpu = Gpu::new();
     let mut window = Window::new("rustboy", WIDTH, HEIGHT, WindowOptions::default()).unwrap();
     let mut buffer: Vec<u32> = vec![255; WIDTH * HEIGHT];
@@ -51,9 +51,10 @@ fn main() {
     loop {
         count += 1;
 
+        println!("IME: {}", cpu.reg.ime);
+
         // CPU
-        let opcode = next_byte(&mut reg, &mut mem);
-        let cycles = call_instruction(opcode, &mut reg, &mut mem);
+        let cycles = cpu.tick(&mut mem);
 
         // GPU
         if gpu.tick(&mut mem, cycles * 4) {
@@ -61,19 +62,8 @@ fn main() {
         }
 
         // Print
-        println!("Last opcode: {:#04x}", opcode);
         println!("Call count: {}", count);
         println!("Line Y: {}", read_byte(0xFF44, &mem));
-        reg.print();
-
-        if reg.f << 4 > 0x00 {
-            println!("{:b}", reg.f);
-            panic!("Forbidden bit!");
-        }
-
-        if count > 160100 {
-            //println!("{:?}", &mem[0x8000..0x97FF]);
-            break;
-        }
+        cpu.reg.print();
     }
 }

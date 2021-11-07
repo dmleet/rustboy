@@ -25,6 +25,11 @@ impl Gpu {
             let line_adr = 0xFF44 as usize;
             mem[line_adr] = (mem[line_adr] + 1) % 154;
             self.clocks -= 456;
+
+            // VBlank Interrupt
+            if mem[line_adr] == 0 {
+                mem[0xFF0F] |= 0x01;
+            }
             return true;
         }
 

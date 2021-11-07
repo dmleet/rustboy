@@ -8,7 +8,8 @@ pub struct Registers {
     pub h: u8,
     pub l: u8,
     pub sp: u16,
-    pub pc: u16
+    pub pc: u16,
+    pub ime: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -34,6 +35,7 @@ impl Registers {
             l: 0x4D,
             sp: 0xFFFE,
             pc: 0x0100, // entry point
+            ime: false,
         }
     }
 

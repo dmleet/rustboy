@@ -93,6 +93,13 @@ impl Registers {
         }
     }
 
+    pub fn set_flags(&mut self, z: bool, n: bool, h: bool, c: bool) {
+        self.set_flag(Flag::Z, z);
+        self.set_flag(Flag::N, n);
+        self.set_flag(Flag::H, h);
+        self.set_flag(Flag::C, c);
+    }
+
     pub fn get_flag_bit(&self, flag: Flag) -> u8 {
         match flag {
             Flag::Z => (self.f >> 7) & 0x01,

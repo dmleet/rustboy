@@ -724,6 +724,13 @@ impl Cpu {
                 4
             },
 
+            // SBC A, d8
+            0xDE => {
+                let n = self.next_byte(mem);
+                alu_sbc(&mut self.reg, n);
+                2
+            },
+
             // RETI
             0xD9 => {
                 self.reg.pc = self.pop_stack(mem);

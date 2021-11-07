@@ -93,6 +93,15 @@ impl Registers {
         }
     }
 
+    pub fn get_flag_bit(&self, flag: Flag) -> u8 {
+        match flag {
+            Flag::Z => (self.f >> 7) & 0x01,
+            Flag::N => (self.f >> 6) & 0x01,
+            Flag::H => (self.f >> 5) & 0x01,
+            Flag::C => (self.f >> 4) & 0x01
+        }
+    } 
+
     pub fn debug(&self) {
         debug!("af: {:#04x} {:#04x}\nbc: {:#04x} {:#04x}\nde: {:#04x} {:#04x}\nhl: {:#04x} {:#04x}\nsp: {:#06x}\npc: {:#06x}",
             self.a, self.f, self.b, self.c, self.d, self.e, self.h, self.l, self.sp, self.pc);

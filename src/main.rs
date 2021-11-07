@@ -3,6 +3,7 @@ mod alu;
 mod mmu;
 mod cpu;
 mod gpu;
+mod cb;
 
 //use crate::registers::*;
 use crate::mmu::*;

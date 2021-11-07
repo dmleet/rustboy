@@ -1,6 +1,7 @@
 use crate::alu::*;
 use crate::registers::*;
 use crate::mmu::*;
+use crate::cb::*;
 
 trait SignedAdd {
     fn signed_add(self, rhs: i8) -> Self;
@@ -177,6 +178,13 @@ impl Cpu {
                 write_word(adr, self.reg.sp, mem);
                 5
             },
+
+            // ADD HL, BC
+            0x09 => {
+                let n = self.reg.bc();
+                alu_add_hl(&mut self.reg, n);
+                2
+            }
     
             // LD A, (BC)
             0x0A => {
@@ -212,6 +220,14 @@ impl Cpu {
                 self.reg.set_de(val);
                 3
             },
+
+            // LD (DE), A
+            0x12 => {
+                let adr = self.reg.de();
+                let val = self.reg.a;
+                write_byte(adr, val, mem);
+                2
+            },
     
             // INC D
             0x14 => {
@@ -246,11 +262,24 @@ impl Cpu {
                 self.reg.c = alu_inc(&mut self.reg, n);
                 1
             },
+
+            // INC DE
+            0x13 => {
+                self.reg.set_de(self.reg.de().wrapping_add(1));
+                2
+            },
     
             // ADD HL, DE
             0x19 => {
                 let n = self.reg.de();
                 alu_add_hl(&mut self.reg, n);
+                2
+            },
+
+            // LD A, (DE)
+            0x1A => {
+                let adr = self.reg.de();
+                self.reg.a = read_byte(adr, mem);
                 2
             },
     
@@ -295,6 +324,14 @@ impl Cpu {
                 let word = self.next_word(mem);
                 self.reg.set_hl(word);
                 3
+            },
+
+            // LD (HL+), A
+            0x22 => {
+                let adr = self.reg.hl();
+                write_byte(adr, self.reg.a, mem);
+                self.reg.set_hl(self.reg.hl().wrapping_add(1));
+                2
             },
     
             // INC HL
@@ -449,6 +486,12 @@ impl Cpu {
                 self.reg.h = self.reg.a;
                 1
             },
+
+            // LD L, A
+            0x6F => {
+                self.reg.l = self.reg.a;
+                1
+            },
     
             // LD (HL), A
             0x77 => {
@@ -479,10 +522,30 @@ impl Cpu {
                 self.reg.a = self.reg.h;
                 1
             },
+
+            // LD A, L
+            0x7D => {
+                self.reg.a = self.reg.l;
+                1
+            },
+
+            // LD A, (HL)
+            0x7E => {
+                let adr = self.reg.hl();
+                self.reg.a = read_byte(adr, mem);
+                2
+            },
     
             // LD A, A
             0x7F => {
                 self.reg.a = self.reg.a;
+                1
+            },
+
+            // ADD A, L
+            0x85 => {
+                let n = self.reg.l;
+                alu_add(&mut self.reg, n);
                 1
             },
 
@@ -586,6 +649,13 @@ impl Cpu {
                 4
             },
 
+            // ADD A, d8
+            0xC6 => {
+                let n = self.next_byte(mem);
+                alu_add(&mut self.reg, n);
+                2
+            },
+
             // RET Z
             0xC8 => {
                 if self.reg.get_flag(Flag::Z) {
@@ -606,7 +676,8 @@ impl Cpu {
     
             // CALL CB
             0xCB => {
-                self.call_cb(mem)
+                let opcode = self.next_byte(mem);
+                self.cb_prefix(opcode, mem)
             }
     
             // CALL a16
@@ -748,26 +819,6 @@ impl Cpu {
             // Instruction not implemented
             _ => {
                 panic!("unsupported instruction: {:#04x}", opcode);
-            }
-        }
-    }
-    
-    fn call_cb(&mut self, mem: &mut Memory) -> u16 {
-        let opcode = self.next_byte(mem);
-        match opcode {
-    
-            // SWAP A
-            0x37 => {
-                self.reg.a = (self.reg.a >> 4) | (self.reg.a << 4);
-                self.reg.set_flag(Flag::Z, false);
-                self.reg.set_flag(Flag::N, false);
-                self.reg.set_flag(Flag::H, false);
-                self.reg.set_flag(Flag::C, false);
-                2
-            },
-    
-            _ => {
-                panic!("unsupported CB instruction: {:#04x}", opcode);
             }
         }
     }

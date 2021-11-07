@@ -56,6 +56,11 @@ pub fn read_bit(adr: u16, bit: u8, mem: &Memory) -> bool {
     (mem[adr as usize] >> bit) & 1 == 1
 }
 
+pub fn bits_to_number(adr: u16, bit: u8, num: u8, mem: &Memory) -> u8{
+
+    return mem[adr as usize] >> bit & 2u8.pow(num as u32)-1;
+}
+
 fn print_debug(label: &str, adr: u16) {
     println!("{} ({:#04x}) - {}",
         label,
@@ -77,6 +82,7 @@ fn print_debug(label: &str, adr: u16) {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[test]
@@ -96,5 +102,32 @@ mod tests {
         assert_eq!(0xCF, read_byte(0xFF00, &mut mem));
         assert_eq!(0x7E, read_byte(0xFF02, &mut mem));
         assert_eq!(0x00, read_byte(0xFFFF, &mut mem));
+    }
+
+    #[test]
+    fn test_read_bit(){
+        let mut mem: Memory = [0; 0xFFFF + 1];
+        write_byte(0x0100, 0xCF, &mut mem);
+        assert!(0xCF == read_byte(0x0100, &mut mem),
+            "Failed to initialize memory");
+
+        assert!(read_bit(0x0100, 0, &mem));
+        assert!(read_bit(0x0100, 1, &mem));
+        assert!(!read_bit(0x0100, 4, &mem));
+        assert!(!read_bit(0x0100, 5, &mem));
+
+    }
+
+    #[test]
+    fn test_bits_to_number(){
+        let mut mem: Memory = [0; 0xFFFF + 1];
+        write_byte(0x0100, 0xCF, &mut mem);
+        assert!(0xCF == read_byte(0x0100, &mut mem),
+            "Failed to initialize memory");
+
+        assert_eq!(3, bits_to_number(0x0100, 0, 2, &mem));
+        assert_eq!(3, bits_to_number(0x0100, 2, 2, &mem));
+        assert_eq!(0, bits_to_number(0x0100, 4, 2, &mem));
+        assert_eq!(15, bits_to_number(0x0100, 0, 4, &mem));
     }
 }

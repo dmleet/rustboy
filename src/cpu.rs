@@ -105,6 +105,11 @@ impl Cpu {
         val
     }
 
+    fn set_ime(&mut self, val: bool) {
+        self.ime_set = Some(val);
+        self.ime_delay = 2;
+    }
+
     // Cpu instruction set
     // Returns m-cycle length of instruction
     fn call_instruction(&mut self, mem: &mut Memory) -> u16 {
@@ -304,6 +309,18 @@ impl Cpu {
                 self.reg.h = alu_dec(&mut self.reg, n);
                 1
             }
+
+            // JR Z, r8
+            0x28 => {
+                if self.reg.get_flag(Flag::Z) {
+                    let n = self.next_byte(mem) as i8;
+                    self.reg.pc = self.reg.pc.signed_add(n);
+                    return 3;
+                } else {
+                    self.reg.pc += 1;
+                    2
+                }
+            },
     
             // LD A, (HL+)
             0x2A => {
@@ -346,11 +363,19 @@ impl Cpu {
                 self.reg.set_hl(self.reg.hl().wrapping_sub(1));
                 2
             },
+
+            // INC (HL)
+            0x34 => {
+                let adr = self.reg.hl();
+                let val = read_byte(adr, mem);
+                write_byte(adr + 0x0001, val, mem);
+                3
+            }
     
             //LD (HL), d8
             0x36 => {
-                let val = self.next_byte(mem);
-                write_byte(self.reg.hl(), val, mem);
+                let n = self.next_byte(mem);
+                alu_inc(&mut self.reg, n);
                 2
             },
     
@@ -361,6 +386,20 @@ impl Cpu {
                     self.reg.pc = ((self.reg.pc as i32) + (n as i32)) as u16;
                 }
                 2
+            },
+
+            // INC A
+            0x3C => {
+                let n = self.reg.a;
+                self.reg.a = alu_inc(&mut self.reg, n);
+                1
+            },
+
+            // DEC A
+            0x3D => {
+                let n = self.reg.a;
+                self.reg.a = alu_dec(&mut self.reg, n);
+                1
             },
     
             // LD A, d8
@@ -384,6 +423,24 @@ impl Cpu {
             // LD C, A
             0x4F => {
                 self.reg.c = self.reg.a;
+                1
+            },
+
+            // LD D, (HL)
+            0x56 => {
+                self.reg.d = read_byte(self.reg.hl(), mem);
+                2
+            },
+
+            // LD E, (HL)
+            0x5E => { 
+                self.reg.e = read_byte(self.reg.hl(), mem);
+                2
+            },
+
+            // LD E, A
+            0x5F => {
+                self.reg.e = self.reg.a;
                 1
             },
     
@@ -428,6 +485,13 @@ impl Cpu {
                 self.reg.a = self.reg.a;
                 1
             },
+
+            // AND A, A
+            0x87 => {
+                let n = self.reg.a;
+                alu_and(&mut self.reg, n);
+                1
+            }
     
             // ADD A, D
             0x8A => {
@@ -446,6 +510,13 @@ impl Cpu {
             // AND C
             0xA1 => {
                 let n = self.reg.c;
+                alu_and(&mut self.reg, n);
+                1
+            },
+
+            // AND A
+            0xA7 => {
+                let n = self.reg.a;
                 alu_and(&mut self.reg, n);
                 1
             },
@@ -484,11 +555,46 @@ impl Cpu {
                 alu_cp(&mut self.reg, n);
                 1
             },
+
+            // RET NZ
+            0xC0 => {
+                if !self.reg.get_flag(Flag::Z) {
+                    self.reg.pc = self.pop_stack(mem);
+                    return 5;
+                } else {
+                    self.reg.pc += 1;
+                    2
+                }
+            },
+
+            // POP BC
+            0xC1 => {
+                let val = self.pop_stack(mem);
+                self.reg.set_bc(val);
+                3
+            },
     
             // JP a16
             0xC3 => {
                 self.reg.pc = self.next_word(mem);
                 4
+            },
+
+            // PUSH BC
+            0xC5 => {
+                self.push_stack(self.reg.bc(), mem);
+                4
+            },
+
+            // RET Z
+            0xC8 => {
+                if self.reg.get_flag(Flag::Z) {
+                    self.reg.pc = self.pop_stack(mem);
+                    return 5;
+                } else {
+                    self.reg.pc += 1;
+                    2
+                }
             },
     
             // RET
@@ -509,6 +615,13 @@ impl Cpu {
                 self.reg.pc = self.next_word(mem);
                 6
             },
+
+            // POP DE
+            0xD1 => {
+                let val = self.pop_stack(mem);
+                self.reg.set_de(val);
+                3
+            },
     
             // JP NC, a16
             0xD2 => {
@@ -518,11 +631,31 @@ impl Cpu {
                 }
                 3
             },
+
+            // PUSH DE
+            0xD5 => {
+                self.push_stack(self.reg.de(), mem);
+                4
+            },
+
+            // RETI
+            0xD9 => {
+                self.reg.pc = self.pop_stack(mem);
+                self.set_ime(true);
+                4
+            },
     
             // LDH (a8), A
             0xE0 => {
                 let adr = self.next_byte(mem) as u16;
                 write_byte(0xFF00 + adr, self.reg.a, mem);
+                3
+            },
+
+            // POP HL
+            0xE1 => {
+                let val = self.pop_stack(mem);
+                self.reg.set_hl(val);
                 3
             },
     
@@ -532,6 +665,12 @@ impl Cpu {
                 write_byte(adr, self.reg.a, mem);
                 2
             },
+
+            // PUSH HL
+            0xE5 => {
+                self.push_stack(self.reg.hl(), mem);
+                4
+            },
     
             // AND d8
             0xE6 => {
@@ -539,11 +678,24 @@ impl Cpu {
                 alu_and(&mut self.reg, n);
                 2
             },
+
+            // JP HL
+            0xE9 => {
+                self.reg.pc = self.reg.hl();
+                1
+            },
     
             // LD (a16), A
             0xEA => {
                 let adr = self.next_word(mem);
                 write_byte(adr, self.reg.a, mem);
+                4
+            },
+
+            // RST 28H
+            0xEF => {
+                self.push_stack(self.reg.pc, mem);
+                self.reg.pc = 0x0028;
                 4
             },
     
@@ -553,18 +705,36 @@ impl Cpu {
                 self.reg.a = read_byte(adr, mem);
                 3
             },
+
+            // POP AF
+            0xF1 => {
+                let val = self.pop_stack(mem);
+                self.reg.set_af(val);
+                3
+            },
     
             // DI
             0xF3 => {
-                self.ime_set = Some(false);
-                self.ime_delay = 2;
+                self.set_ime(false);
                 1
+            },
+
+            // PUSH AF
+            0xF5 => {
+                self.push_stack(self.reg.af(), mem);
+                4
+            },
+
+            // LD A, (a16)
+            0xFA => {
+                let adr = self.next_word(mem);
+                self.reg.a = read_byte(adr, mem);
+                4
             },
     
             // EI
             0xFB => {
-                self.ime_set = Some(true);
-                self.ime_delay = 2;
+                self.set_ime(true);
                 1
             },
     

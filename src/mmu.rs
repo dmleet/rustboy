@@ -82,7 +82,6 @@ fn print_debug(label: &str, adr: u16) {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::binary_heap;
 
     use super::*;
 

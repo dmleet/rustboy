@@ -283,6 +283,19 @@ impl Cpu {
                 self.reg.a = read_byte(adr, mem);
                 2
             },
+
+            // DEC DE
+            0x1B => {
+                self.reg.set_de(self.reg.de().wrapping_sub(1));
+                2
+            },
+
+            // INC E
+            0x1C => {
+                let n = self.reg.e;
+                self.reg.e = alu_inc(&mut self.reg, n);
+                1
+            },
     
             // DEC E
             0x1D => {
@@ -339,14 +352,14 @@ impl Cpu {
             0x23 => {
                 self.reg.set_hl(self.reg.hl().wrapping_add(1));
                 2
-            }
+            },
     
             // DEC H
             0x25 => {
                 let n = self.reg.h;
                 self.reg.h = alu_dec(&mut self.reg, n);
                 1
-            }
+            },
 
             // JR Z, r8
             0x28 => {
@@ -366,11 +379,24 @@ impl Cpu {
                 self.reg.set_hl(self.reg.hl().wrapping_add(1));
                 2
             },
+
+            // DEC HL
+            0x2B => {
+                self.reg.set_hl(self.reg.hl().wrapping_sub(1));
+                2
+            },
     
             // INC L
             0x2C => {
                 let n = self.reg.l;
                 self.reg.l = alu_inc(&mut self.reg, n);
+                1
+            },
+
+            // DEC L
+            0x2D => {
+                let n = self.reg.l;
+                self.reg.l = alu_dec(&mut self.reg, n);
                 1
             },
     
@@ -408,7 +434,7 @@ impl Cpu {
                 let val = read_byte(adr, mem);
                 write_byte(adr + 0x0001, val, mem);
                 3
-            }
+            },
     
             //LD (HL), d8
             0x36 => {
@@ -423,6 +449,13 @@ impl Cpu {
                     let n = self.next_byte(mem) as i8;
                     self.reg.pc = ((self.reg.pc as i32) + (n as i32)) as u16;
                 }
+                2
+            },
+
+            // LD A, (HL-)
+            0x3A => {
+                self.reg.a = read_byte(self.reg.hl(), mem);
+                self.reg.set_hl(self.reg.hl().wrapping_sub(1));
                 2
             },
 
@@ -470,6 +503,12 @@ impl Cpu {
                 2
             },
 
+            // LD D, A
+            0x57 => {
+                self.reg.d = self.reg.a;
+                1
+            },
+
             // LD E, (HL)
             0x5E => { 
                 self.reg.e = read_byte(self.reg.hl(), mem);
@@ -511,6 +550,12 @@ impl Cpu {
                 self.reg.a = self.reg.c;
                 1
             },
+
+            // LD A, D
+            0x7A => {
+                self.reg.a = self.reg.d;
+                1
+            },
     
             // LD A, E
             0x7B => {
@@ -550,6 +595,13 @@ impl Cpu {
                 1
             },
 
+            // ADD A, D
+            0x82 => {
+                let n = self.reg.d;
+                alu_add(&mut self.reg, n);
+                1
+            },
+
             // ADD A, L
             0x85 => {
                 let n = self.reg.l;
@@ -569,7 +621,7 @@ impl Cpu {
                 let n = self.reg.c;
                 alu_adc(&mut self.reg, n);
                 1
-            }
+            },
     
             // ADD A, D
             0x8A => {
@@ -592,6 +644,13 @@ impl Cpu {
                 1
             },
 
+            // SUB (HL)
+            0x96 => {
+                let n = read_byte(self.reg.hl(), mem);
+                alu_sub(&mut self.reg, n);
+                2
+            },
+
             // SBC A, C
             0x99 => {
                 let n = self.reg.c;
@@ -602,6 +661,13 @@ impl Cpu {
             // AND C
             0xA1 => {
                 let n = self.reg.c;
+                alu_and(&mut self.reg, n);
+                1
+            },
+
+            // AND H
+            0xA4 => {
+                let n = self.reg.h;
                 alu_and(&mut self.reg, n);
                 1
             },
@@ -701,13 +767,13 @@ impl Cpu {
                 let adr = self.pop_stack(mem);
                 self.reg.pc = adr;
                 4
-            }
+            },
     
             // CALL CB
             0xCB => {
                 let opcode = self.next_byte(mem);
                 self.cb_prefix(opcode, mem)
-            }
+            },
     
             // CALL a16
             0xCD => {
@@ -736,6 +802,13 @@ impl Cpu {
             0xD5 => {
                 self.push_stack(self.reg.de(), mem);
                 4
+            },
+
+            // SUB d8
+            0xD6 => {
+                let n = self.next_byte(mem);
+                alu_sub(&mut self.reg, n);
+                2
             },
 
             // SBC A, d8

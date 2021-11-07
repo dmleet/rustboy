@@ -1,5 +1,4 @@
-use crate::alu::alu_bit;
-use crate::registers::*;
+use crate::alu::*;
 use crate::mmu::*;
 use crate::cpu::*;
 
@@ -11,23 +10,22 @@ impl Cpu {
             // RLC (HL)
             0x06 => {
                 let adr = self.reg.hl();
-                let byte = read_byte(adr, mem);
-                let res = byte << 1;
-                self.reg.set_flag(Flag::Z, res == 0);
-                self.reg.set_flag(Flag::N, false);
-                self.reg.set_flag(Flag::H, false);
-                self.reg.set_flag(Flag::C, (byte & 0x80) == 0x80);
-                write_byte(adr, res, mem);
+                let val = alu_rlc(&mut self.reg, read_byte(adr, mem));
+                write_byte(adr, val, mem);
                 4
             }
     
             // SWAP A
             0x37 => {
-                self.reg.a = (self.reg.a >> 4) | (self.reg.a << 4);
-                self.reg.set_flag(Flag::Z, false);
-                self.reg.set_flag(Flag::N, false);
-                self.reg.set_flag(Flag::H, false);
-                self.reg.set_flag(Flag::C, false);
+                let n = self.reg.a;
+                self.reg.a = alu_swap(&mut self.reg, n);
+                2
+            },
+
+            // BIT 0, C
+            0x41 => {
+                let r = self.reg.c;
+                alu_bit(&mut self.reg, 0, r);
                 2
             },
 
@@ -49,6 +47,14 @@ impl Cpu {
             0x87 => {
                 self.reg.a &= 0xFE;
                 2
+            },
+
+            // SET 7. (HL)
+            0xFE => {
+                let adr = self.reg.hl();
+                let val = read_byte(adr, mem) | 0x80;
+                write_byte(adr, val, mem);
+                4
             },
     
             _ => {

@@ -103,6 +103,24 @@ pub fn alu_add_hl(reg: &mut Registers, n: u16) {
     reg.set_hl(r);
 }
 
+/// Misc
+
+// SWAP n
+pub fn alu_swap(reg: &mut Registers, n: u8) -> u8 {
+    let r = (n & 0xF0) >> 4 | (n & 0x0F) << 4;
+    reg.set_flags(r == 0, false, false, false);
+    r
+}
+
+/// Rotates
+
+// RLC n
+pub fn alu_rlc(reg: &mut Registers, n: u8) -> u8 {
+    let r = n << 1 | n >> 7;
+    reg.set_flags(r == 0, false, false, n & 0x80 == 0x80);
+    r
+}
+
 /// Bit Opcodes
 
 // BIT b, r
@@ -113,8 +131,8 @@ pub fn alu_bit(reg: &mut Registers, b: u8, r: u8) {
 }
 
 // SET b, r
-pub fn alu_set(r: &mut u8, b: u8) {
-    *r |= 1 << b;
+pub fn alu_set(r: u8, b: u8) -> u8 {
+    r | (1 << b)
 }
 
 
@@ -256,6 +274,24 @@ mod tests {
 	}
 
     #[test]
+    fn test_alu_swap() {
+        let mut reg = Registers::new();
+        reg.f = 0b11110000;
+        let n = alu_swap(&mut reg, 0x01);
+        assert_eq!(n, 0b00010000);
+        assert_eq!(reg.f, 0b00000000);
+    }
+
+    #[test]
+    fn test_alu_rlc() {
+        let mut reg = Registers::new();
+        reg.f = 0b10000000;
+        let n = alu_rlc(&mut reg, 0x81);
+        assert_eq!(n, 0b00000011);
+        assert_eq!(reg.f, 0b00010000);
+    }
+
+    #[test]
     fn test_alu_bit() {
         let mut reg = Registers::new();
         reg.f = 0b11110000;
@@ -266,7 +302,7 @@ mod tests {
     #[test]
     fn test_alu_set() {
         let mut r = 0x01;
-        alu_set(&mut r, 1);
+        r = alu_set(r, 1);
         assert_eq!(r, 0x03);
     }
 }

@@ -1,3 +1,5 @@
+use log::debug;
+
 pub type Memory = [u8; 0xFFFF + 1];
 
 pub fn init_memory(mem: &mut Memory) {
@@ -50,19 +52,19 @@ pub fn write_word(adr: u16, val: u16, mem: &mut [u8]) {
     mem[(adr + 1) as usize] = (val >> 8) as u8;
 }
 
-pub fn read_bit(adr: u16, bit: u8, mem: &Memory) -> bool {
+pub fn read_bit(adr: u16, bit: u8, mem: &Memory) -> u8 {
     print_debug("Read bit", adr);
 
-    (mem[adr as usize] >> bit) & 1 == 1
+    (mem[adr as usize] >> bit) & 1
 }
 
 pub fn bits_to_number(adr: u16, bit: u8, num: u8, mem: &Memory) -> u8{
 
-    return mem[adr as usize] >> bit & 2u8.pow(num as u32)-1;
+    mem[adr as usize] >> bit & 2u8.pow(num as u32) - 1
 }
 
 fn print_debug(label: &str, adr: u16) {
-    println!("{} ({:#04x}) - {}",
+    debug!("{} ({:#04x}) - {}",
         label,
         adr,
         match adr {
@@ -111,10 +113,10 @@ mod tests {
         assert!(0xCF == read_byte(0x0100, &mut mem),
             "Failed to initialize memory");
 
-        assert!(read_bit(0x0100, 0, &mem));
-        assert!(read_bit(0x0100, 1, &mem));
-        assert!(!read_bit(0x0100, 4, &mem));
-        assert!(!read_bit(0x0100, 5, &mem));
+        assert!(read_bit(0x0100, 0, &mem) == 1);
+        assert!(read_bit(0x0100, 1, &mem) == 1);
+        assert!(read_bit(0x0100, 4, &mem) == 0);
+        assert!(read_bit(0x0100, 5, &mem) == 0);
 
     }
 

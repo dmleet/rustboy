@@ -14,7 +14,7 @@ impl Gpu {
     }
 
     pub fn tick(&mut self, mem: &mut Memory, cycles: u16) -> bool {
-        self.lcd_enabled = read_bit(0xFF40, 7, mem);
+        self.lcd_enabled = read_bit(0xFF40, 7, mem) == 1;
         if !self.lcd_enabled {
             mem[0xFF44] = 0;
             return false;

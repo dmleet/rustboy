@@ -34,23 +34,29 @@ pub fn alu_add(reg: &mut Registers, n: u8) {
     reg.a = r.0;
 }
 
-// Stores the result of SUB n in A and sets flags
-pub fn alu_sub(reg: &mut Registers, n: u8) {
+// Returns the result of AND n and sets flags
+pub fn alu_and(reg: &mut Registers, n: u8) {
+    reg.a &= n;
+    reg.set_flag(Flag::Z, reg.a == 0);
+    reg.set_flag(Flag::N, false);
+    reg.set_flag(Flag::H, true);
+    reg.set_flag(Flag::C, false);
+}
+
+// BIT b, r
+pub fn alu_bit(reg: &mut Registers, b: u8, r: u8) {
+    reg.set_flag(Flag::Z, r & (1 << b) == 1);
+    reg.set_flag(Flag::N, false);
+    reg.set_flag(Flag::H, true);
+}
+
+// Sets flags from CP n
+pub fn alu_cp(reg: &mut Registers, n: u8) {
     let r = reg.a.carry_sub(n);
     reg.set_flag(Flag::Z, r.0 == 0);
     reg.set_flag(Flag::N, true);
     reg.set_flag(Flag::H, r.1);
     reg.set_flag(Flag::C, r.2);
-    reg.a = r.0;
-}
-
-// Returns the result of INC n and sets flags
-pub fn alu_inc(reg: &mut Registers, n: u8) -> u8 {
-    let r = n.carry_add(1);
-    reg.set_flag(Flag::Z, r.0 == 0);
-    reg.set_flag(Flag::N, false);
-    reg.set_flag(Flag::H, r.1);
-    r.0
 }
 
 // Returns the result of DEC n and sets flags
@@ -62,13 +68,13 @@ pub fn alu_dec(reg: &mut Registers, n: u8) -> u8 {
     r.0
 }
 
-// Returns the result of AND n and sets flags
-pub fn alu_and(reg: &mut Registers, n: u8) {
-    reg.a &= n;
-    reg.set_flag(Flag::Z, reg.a == 0);
+// Returns the result of INC n and sets flags
+pub fn alu_inc(reg: &mut Registers, n: u8) -> u8 {
+    let r = n.carry_add(1);
+    reg.set_flag(Flag::Z, r.0 == 0);
     reg.set_flag(Flag::N, false);
-    reg.set_flag(Flag::H, true);
-    reg.set_flag(Flag::C, false);
+    reg.set_flag(Flag::H, r.1);
+    r.0
 }
 
 // Stores the reult of OR n in A and sets flags
@@ -80,6 +86,26 @@ pub fn alu_or(reg: &mut Registers, n: u8) {
     reg.set_flag(Flag::C, false);
 }
 
+pub fn alu_sbc(reg: &mut Registers, n: u8) {
+    let c = reg.get_flag(Flag::C) as u8;
+    let r = reg.a.carry_sub(n + c);
+    reg.set_flag(Flag::Z, r.0 == 0);
+    reg.set_flag(Flag::N, true);
+    reg.set_flag(Flag::H, r.1);
+    reg.set_flag(Flag::C, r.2);
+    reg.a = r.0;
+}
+
+// Stores the result of SUB n in A and sets flags
+pub fn alu_sub(reg: &mut Registers, n: u8) {
+    let r = reg.a.carry_sub(n);
+    reg.set_flag(Flag::Z, r.0 == 0);
+    reg.set_flag(Flag::N, true);
+    reg.set_flag(Flag::H, r.1);
+    reg.set_flag(Flag::C, r.2);
+    reg.a = r.0;
+}
+
 // Stores the result of XOR n in A and sets flags
 pub fn alu_xor(reg: &mut Registers, n: u8) {
     reg.a = reg.a ^ n;
@@ -87,15 +113,6 @@ pub fn alu_xor(reg: &mut Registers, n: u8) {
     reg.set_flag(Flag::N, false);
     reg.set_flag(Flag::H, false);
     reg.set_flag(Flag::C, false);
-}
-
-// Sets flags from CP n
-pub fn alu_cp(reg: &mut Registers, n: u8) {
-    let r = reg.a.carry_sub(n);
-    reg.set_flag(Flag::Z, r.0 == 0);
-    reg.set_flag(Flag::N, true);
-    reg.set_flag(Flag::H, r.1);
-    reg.set_flag(Flag::C, r.2);
 }
 
 // 16-bit Functions

@@ -1,7 +1,8 @@
 use crate::alu::*;
 use crate::registers::*;
 use crate::mmu::*;
-use crate::cb::*;
+
+use log::debug;
 
 trait SignedAdd {
     fn signed_add(self, rhs: i8) -> Self;
@@ -67,7 +68,7 @@ impl Cpu {
                 0x01 => { // VBlank interrupt
                     self.push_stack(self.reg.pc, mem);
                     self.reg.pc = 0x0040;
-                    println!("VBlank interrupt!");
+                    debug!("VBlank interrupt!");
                     return Some(4);
                 },
                 _ => {
@@ -96,13 +97,13 @@ impl Cpu {
     fn push_stack(&mut self, val: u16, mem: &mut Memory) {
         self.reg.sp -= 2;
         write_word(self.reg.sp, val, mem);
-        println!("PUSH: {:#04x}", val);
+        debug!("PUSH: {:#04x}", val);
     }
     
     fn pop_stack(&mut self, mem: &mut Memory) -> u16 {
         let val = read_word(self.reg.sp, mem);
         self.reg.sp += 2;
-        println!("POP: {:#04x}", val);
+        debug!("POP: {:#04x}", val);
         val
     }
 
@@ -115,7 +116,7 @@ impl Cpu {
     // Returns m-cycle length of instruction
     fn call_instruction(&mut self, mem: &mut Memory) -> u16 {
         let opcode = self.next_byte(mem);
-        println!("Last opcode: {:02X}", opcode);
+        debug!("Last opcode: {:02X}", opcode);
     
         match opcode {
     
@@ -554,7 +555,7 @@ impl Cpu {
                 let n = self.reg.a;
                 alu_and(&mut self.reg, n);
                 1
-            }
+            },
     
             // ADD A, D
             0x8A => {
@@ -562,11 +563,25 @@ impl Cpu {
                 alu_add(&mut self.reg, n);
                 1
             },
+
+            // SUB B
+            0x90 => {
+                let n = self.reg.b;
+                alu_sub(&mut self.reg, n);
+                1
+            },
     
             // SUB E
             0x93 => {
                 let n = self.reg.e;
                 alu_sub(&mut self.reg, n);
+                1
+            },
+
+            // SBC A, C
+            0x99 => {
+                let n = self.reg.c;
+                alu_sbc(&mut self.reg, n);
                 1
             },
     

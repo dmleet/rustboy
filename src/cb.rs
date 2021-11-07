@@ -1,3 +1,4 @@
+use crate::alu::alu_bit;
 use crate::registers::*;
 use crate::mmu::*;
 use crate::cpu::*;
@@ -29,6 +30,13 @@ impl Cpu {
                 self.reg.set_flag(Flag::C, false);
                 2
             },
+
+            // BIT 6, A
+            0x77 => {
+                let r = self.reg.a;
+                alu_bit(&mut self.reg, 6, r);
+                2
+            }
 
             // RES 0, A
             0x87 => {

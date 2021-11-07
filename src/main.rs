@@ -5,21 +5,30 @@ mod cpu;
 mod gpu;
 mod cb;
 
-//use crate::registers::*;
 use crate::mmu::*;
 use crate::cpu::*;
 use crate::gpu::*;
 
 use minifb::{ Window, WindowOptions };
 
-use std::io::Read;
+use std::io::{ Read, Write };
 use std::path::Path;
 use std::fs::File;
+use log::debug;
 
 const WIDTH: usize = 160;
 const HEIGHT: usize = 144;
 
 fn main() {
+    env_logger::builder()
+        .format(|buf, record| {
+            match record.level() {
+                log::Level::Debug => writeln!(buf, "{}", record.args()),
+                _ => writeln!(buf, "{}: {}", record.level(), record.args()),
+                
+            }
+        }).init();
+
     println!("Hello, rustboy!");
 
     let mut mem: Memory = [0; 0xFFFF + 1];
@@ -52,7 +61,7 @@ fn main() {
     loop {
         count += 1;
 
-        println!("IME: {}", cpu.reg.ime);
+        debug!("IME: {}", cpu.reg.ime);
 
         // CPU
         let cycles = cpu.tick(&mut mem);
@@ -63,8 +72,9 @@ fn main() {
         }
 
         // Print
-        println!("Call count: {}", count);
-        println!("Line Y: {}", read_byte(0xFF44, &mem));
-        cpu.reg.print();
+        debug!("Call count: {}", count);
+        debug!("Line Y: {}", read_byte(0xFF44, &mem));
+        cpu.reg.debug();
+        debug!("\n");
     }
 }

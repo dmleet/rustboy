@@ -1,3 +1,5 @@
+use log::debug;
+
 pub struct Registers {
     pub a: u8,
     pub f: u8,
@@ -91,10 +93,10 @@ impl Registers {
         }
     }
 
-    pub fn print(&self) {
-        print!("af: {:#04x} {:#04x}\nbc: {:#04x} {:#04x}\nde: {:#04x} {:#04x}\nhl: {:#04x} {:#04x}\nsp: {:#06x}\npc: {:#06x}\n",
+    pub fn debug(&self) {
+        debug!("af: {:#04x} {:#04x}\nbc: {:#04x} {:#04x}\nde: {:#04x} {:#04x}\nhl: {:#04x} {:#04x}\nsp: {:#06x}\npc: {:#06x}",
             self.a, self.f, self.b, self.c, self.d, self.e, self.h, self.l, self.sp, self.pc);
-        print!("Z N H C\n{} {} {} {}\n\n", 
+        debug!("Z N H C\n{} {} {} {}", 
             self.get_flag(Flag::Z) as u8, self.get_flag(Flag::N) as u8, self.get_flag(Flag::H) as u8, self.get_flag(Flag::C) as u8);
     }
 }

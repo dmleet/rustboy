@@ -543,6 +543,13 @@ impl Cpu {
                 1
             },
 
+            // ADD A, B
+            0x80 => {
+                let n = self.reg.b;
+                alu_add(&mut self.reg, n);
+                1
+            },
+
             // ADD A, L
             0x85 => {
                 let n = self.reg.l;
@@ -556,6 +563,13 @@ impl Cpu {
                 alu_and(&mut self.reg, n);
                 1
             },
+
+            // ADC A, C
+            0x89 => {
+                let n = self.reg.c;
+                alu_adc(&mut self.reg, n);
+                1
+            }
     
             // ADD A, D
             0x8A => {

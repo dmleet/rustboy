@@ -31,6 +31,13 @@ impl Cpu {
                 2
             },
 
+            // BIT 5, A
+            0x6F => {
+                let b = self.reg.a;
+                alu_bit(&mut self.reg, b, 5);
+                2
+            },
+
             // BIT 6, A
             0x77 => {
                 let r = self.reg.a;

@@ -68,13 +68,6 @@ pub fn alu_xor(reg: &mut Registers, n: u8) {
     reg.set_flags(reg.a == 0, false, false, false);
 }
 
-// BIT b, r
-pub fn alu_bit(reg: &mut Registers, b: u8, r: u8) {
-    reg.set_flag(Flag::Z, r & (1 << b) == 1);
-    reg.set_flag(Flag::N, false);
-    reg.set_flag(Flag::H, true);
-}
-
 // Sets flags from CP n
 pub fn alu_cp(reg: &mut Registers, n: u8) {
     let (r, h, c) = reg.a.carry_sub(n);
@@ -111,6 +104,13 @@ pub fn alu_add_hl(reg: &mut Registers, n: u16) {
 }
 
 /// Bit Opcodes
+
+// BIT b, r
+pub fn alu_bit(reg: &mut Registers, b: u8, r: u8) {
+    reg.set_flag(Flag::Z, r & (1 << b) == 0);
+    reg.set_flag(Flag::N, false);
+    reg.set_flag(Flag::H, true);
+}
 
 // SET b, r
 pub fn alu_set(r: &mut u8, b: u8) {
@@ -254,6 +254,14 @@ mod tests {
 		assert!(reg.get_flag(Flag::H));
 		assert!(!reg.get_flag(Flag::C));
 	}
+
+    #[test]
+    fn test_alu_bit() {
+        let mut reg = Registers::new();
+        reg.f = 0b11110000;
+        alu_bit(&mut reg, 0, 0x01);
+        assert_eq!(reg.f, 0b00110000);
+    }
 
     #[test]
     fn test_alu_set() {

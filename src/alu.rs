@@ -121,6 +121,13 @@ pub fn alu_rlc(reg: &mut Registers, n: u8) -> u8 {
     r
 }
 
+// SLA n
+pub fn alu_sla(reg: &mut Registers, n: u8) -> u8 {
+    let r = (n << 1) & 0xFE;
+    reg.set_flags(r == 0, false, false, n & 0x80 == 0x80);
+    r
+}
+
 /// Bit Opcodes
 
 // BIT b, r
@@ -288,6 +295,15 @@ mod tests {
         reg.f = 0b10000000;
         let n = alu_rlc(&mut reg, 0x81);
         assert_eq!(n, 0b00000011);
+        assert_eq!(reg.f, 0b00010000);
+    }
+
+    #[test]
+    fn test_alu_sla() {
+        let mut reg = Registers::new();
+        reg.f = 0b11110000;
+        let n = alu_sla(&mut reg, 0x81);
+        assert_eq!(n, 0b00000010);
         assert_eq!(reg.f, 0b00010000);
     }
 

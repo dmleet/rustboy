@@ -14,6 +14,14 @@ impl Cpu {
                 write_byte(adr, val, mem);
                 4
             }
+
+            // SLA A
+            0x27 => {
+                let n = self.reg.a;
+                let val = alu_sla(&mut self.reg, n);
+                self.reg.a = val;
+                2
+            }
     
             // SWAP A
             0x37 => {

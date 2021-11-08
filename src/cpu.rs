@@ -484,11 +484,26 @@ impl Cpu {
                 self.reg.b = self.reg.c;
                 1
             },
+
+            // LD B, (HL)
+            0x46 => {
+                self.reg.b = read_byte(self.reg.hl(), mem);
+                2
+            },
     
             // LD B, A
             0x47 => {
                 self.reg.b = self.reg.a;
                 1
+            },
+
+            // LD C, C
+            0x49 => { 1 },
+
+            // LD C, (HL)
+            0x4E => {
+                self.reg.c = read_byte(self.reg.hl(), mem);
+                2
             },
     
             // LD C, A
@@ -520,10 +535,22 @@ impl Cpu {
                 self.reg.e = self.reg.a;
                 1
             },
+
+            // LD H, B
+            0x60 => {
+                self.reg.h = self.reg.b;
+                1
+            },
     
             // LD H, A
             0x67 => {
                 self.reg.h = self.reg.a;
+                1
+            },
+
+            // LD L, C
+            0x69 => {
+                self.reg.l = self.reg.c;
                 1
             },
 
@@ -640,6 +667,13 @@ impl Cpu {
             // SUB E
             0x93 => {
                 let n = self.reg.e;
+                alu_sub(&mut self.reg, n);
+                1
+            },
+
+            // SUB H
+            0x94 => {
+                let n = self.reg.h;
                 alu_sub(&mut self.reg, n);
                 1
             },
@@ -768,6 +802,17 @@ impl Cpu {
                 self.reg.pc = adr;
                 4
             },
+
+            // JP Z, a16
+            0xCA => {
+                if self.reg.get_flag(Flag::Z) {
+                    self.reg.pc = self.next_word(mem);
+                    return 4;
+                } else {
+                    self.reg.pc += 2;
+                    3
+                }
+            },
     
             // CALL CB
             0xCB => {
@@ -827,8 +872,8 @@ impl Cpu {
     
             // LDH (a8), A
             0xE0 => {
-                let adr = self.next_byte(mem) as u16;
-                write_byte(0xFF00 + adr, self.reg.a, mem);
+                let adr = 0xFF00 | self.next_byte(mem) as u16;
+                write_byte(adr, self.reg.a, mem);
                 3
             },
 
@@ -881,8 +926,9 @@ impl Cpu {
     
             // LDH A, (a8)
             0xF0 => {
-                let adr = 0xFF00 + self.next_byte(mem) as u16;
+                let adr = 0xFF00 | self.next_byte(mem) as u16;
                 self.reg.a = read_byte(adr, mem);
+                debug!("LDH A, (0x{:X})", adr);
                 3
             },
 

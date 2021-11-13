@@ -27,6 +27,11 @@ pub fn init_memory(mem: &mut Memory) {
 pub fn read_byte(adr: u16, mem: &[u8]) -> u8 {
     print_debug("Read byte", adr);
 
+    // TODO: This is a placeholder for proper button reading
+    if adr == 0xFF00 {
+        return 0xEF;
+    }
+
     mem[adr as usize]
 }
 

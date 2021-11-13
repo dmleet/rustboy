@@ -18,6 +18,7 @@ pub struct Cpu {
     pub reg: Registers,
     ime_delay: u8,
     ime_set: Option<bool>,
+    t_states: u32
 }
 
 impl Cpu {
@@ -26,17 +27,26 @@ impl Cpu {
             reg: Registers::new(),
             ime_delay: 0,
             ime_set: None,
+            t_states: 0
         }
     }
 
     // Returns tick length in m-cycles
     pub fn tick(&mut self, mem: &mut Memory) -> u16 {
-        match self.interrupt(mem) {
+        let tick_len = match self.interrupt(mem) {
             Some(cycles) => cycles,
             None => {
                 self.call_instruction(mem)
             }
+        };
+        self.t_states += (tick_len * 4) as u32;
+
+        // Timer
+        if self.t_states > 4194304 {
+            self.t_states -= 4194304;
         }
+
+        tick_len
     }
 
     fn interrupt(&mut self, mem: &mut Memory) -> Option<u16> {
@@ -636,10 +646,10 @@ impl Cpu {
                 1
             },
 
-            // AND A, A
+            // ADD A, A
             0x87 => {
                 let n = self.reg.a;
-                alu_and(&mut self.reg, n);
+                alu_add(&mut self.reg, n);
                 1
             },
 

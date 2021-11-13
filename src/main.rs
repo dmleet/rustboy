@@ -11,13 +11,18 @@ use crate::gpu::*;
 
 use minifb::{ Window, WindowOptions };
 
+use std::io::stdin;
 use std::io::{ Read, Write };
+use std::ops::Mul;
 use std::path::Path;
 use std::fs::File;
+use std::time::Duration;
 use log::debug;
+use std::thread;
 
 const WIDTH: usize = 160;
 const HEIGHT: usize = 144;
+const LIMIT_CYCLES: bool = true;
 
 fn main() {
     env_logger::builder()
@@ -57,24 +62,67 @@ fn main() {
     
     assert_eq!(read_byte(0x0147, &mem), 0x00, "MBC not supported!");
     
-    let mut count: u32 = 0;
+    const M_CYCLES_PER_FRAME: u32 = 16384;
+    //const M_CYCLE_DUR: Duration = Duration::from_secs_f64(4.0 / 4194304.0 as f64); // unstable
+    const M_CYCLE_DUR: Duration = Duration::from_nanos(954); // 953.67431640625
+    let mut call_count = 0;
+    let mut frame_cur_m_cycles = 0;
     loop {
-        count += 1;
-
+        call_count += 1;
         debug!("IME: {}", cpu.reg.ime);
 
-        // CPU
-        let cycles = cpu.tick(&mut mem);
-
-        // GPU
-        if gpu.tick(&mut mem, cycles * 4) {
-            window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
+        // Run CPU m-cycle
+        let now = std::time::Instant::now();
+        let op_cycles = cpu.tick(&mut mem);
+        for _cycle in 0..op_cycles {
+            gpu.tick(&mut mem);
+            frame_cur_m_cycles += 1;
+            if frame_cur_m_cycles == M_CYCLES_PER_FRAME {
+                window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap(); 
+                frame_cur_m_cycles = 0;
+            }
+        }
+        let elapsed = now.elapsed();
+        let op_duration = M_CYCLE_DUR.mul(op_cycles as u32);
+        if elapsed < op_duration && LIMIT_CYCLES {
+            thread::sleep(op_duration - elapsed);
         }
 
-        // Print
-        debug!("Call count: {}", count);
+        // Debug
+        debug!("Call count: {}", call_count);
         debug!("Line Y: {}", read_byte(0xFF44, &mem));
         cpu.reg.debug();
         debug!("\n");
+
+        if call_count > 80000 {
+            break;
+        }
     }
+
+    println!("{:?}", &mem[0x8000..0x8800]);
+
+    let mut tile_row = 0;
+    let tile_data = &mem[0x8000..0x8800];
+    tile_data.chunks_exact(16).enumerate().for_each(|(i, tile)| {
+        if i % 20 == 0 && i != 0 { tile_row += 1 }
+        tile.chunks_exact(2).enumerate().for_each(|(j, row)| {
+            for col in 0..7 {
+                let pixel = (row[0] >> (7 - col) & 0x1) + ((row[1] >> (7 - col) & 0x1));
+                buffer[(tile_row * WIDTH * 8) + ((j * WIDTH) + (i * 8 + col)) as usize] = match pixel {
+                    0 => 0xFF0000FF,
+                    1 => 0xFF00FF00,
+                    2 => 0xFFFF0000,
+                    3 => 0xFFFFFFFF,
+                    _ => 0xFF000000,
+                };
+            }
+        });
+    });
+
+    window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
+    
+    // Press enter to exit
+    println!("\nPress enter to exit...");
+    stdin().read(&mut [0]).unwrap();
+
 }

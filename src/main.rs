@@ -71,10 +71,11 @@ fn main() {
         call_count += 1;
         debug!("IME: {}", cpu.reg.ime);
 
-        // Run CPU m-cycle
+        // Run next instruction
         let now = std::time::Instant::now();
         let op_cycles = cpu.tick(&mut mem);
         for _cycle in 0..op_cycles {
+            // Run CPU m-cycle
             gpu.tick(&mut mem);
             frame_cur_m_cycles += 1;
             if frame_cur_m_cycles == M_CYCLES_PER_FRAME {
@@ -99,8 +100,9 @@ fn main() {
         }
     }
 
+    // Hacky print of vram tile data
+    // TODO: Remove this
     println!("{:?}", &mem[0x8000..0x8800]);
-
     let mut tile_row = 0;
     let tile_data = &mem[0x8000..0x8800];
     tile_data.chunks_exact(16).enumerate().for_each(|(i, tile)| {
@@ -118,7 +120,6 @@ fn main() {
             }
         });
     });
-
     window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
     
     // Press enter to exit
